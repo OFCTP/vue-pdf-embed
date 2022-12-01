@@ -4,12 +4,34 @@
       v-for="pageNum in pageNums"
       :key="pageNum"
       :id="id && `${id}-${pageNum}`"
+      style="position: relative"
     >
-      <canvas />
+        <canvas
+            :id="`canvas-${pageNum}`"
+            :ref="`canvas-${pageNum}`"
+            style="z-index: 0; position: absolute"
+        />
+        <canvas
+            :id="`canvas-${pageNum}-draws`"
+            :ref="`canvas-${pageNum}-draws`"
+            :page="`${pageNum}`"
+            style="z-index: 30; position: absolute"
+            @click="handleEvent"
+            @mousedown="handleEvent"
+            @mouseup="handleEvent"
+            @mousemove="handleEvent"
+            @touchstart="handleEvent"
+            @touchend="handleEvent"
+            @touchmove="handleEvent"
+            @wheel="handleEvent"
+            @scroll="handleEvent"
+        />
 
       <div v-if="!disableTextLayer" class="textLayer" />
 
       <div v-if="!disableAnnotationLayer" class="annotationLayer" />
+
+      <div style="clear: both"></div>
     </div>
   </div>
 </template>
@@ -22,6 +44,7 @@ import {
   addPrintStyles,
   createPrintIframe,
   emptyElement,
+  releaseCanvas,
   releaseChildCanvases,
 } from './util.js'
 
@@ -92,6 +115,17 @@ export default {
      * @values Number, String
      */
     width: [Number, String],
+    /**
+     * Desired margin between pages
+     * @values Number
+     */
+    margin: Number,
+    /**
+     * Desired zoom
+     * @values Number
+     */
+    cameraOffsetX: Number,
+    cameraOffsetY: Number
   },
   data() {
     return {
@@ -133,6 +167,20 @@ export default {
           await this.load()
         }
         this.render()
+      }
+    )
+    /*
+    optimisation ?
+     */
+    this.$watch(
+      () => [
+        this.scale,
+        this.cameraOffsetX,
+        this.cameraOffsetY
+      ],
+      async () => {
+        await this.render()
+        //await this.updateCanvas()
       }
     )
   },
@@ -267,6 +315,7 @@ export default {
         iframe.contentWindow.focus()
         iframe.contentWindow.print()
       } catch (e) {
+        console.error(e)
         this.$emit('printing-failed', e)
       } finally {
         if (title) {
@@ -282,6 +331,43 @@ export default {
      *
      * NOTE: Ignored if the document is not loaded.
      */
+    async updateCanvas() {
+      console.log("updateCanvas")
+      if (!this.document) {
+        return
+      }
+      try {
+        this.pageNums = this.page
+            ? [this.page]
+            : [...Array(this.document.numPages + 1).keys()].slice(1)
+        await Promise.all(
+            this.pageNums.map(async (pageNum, i) => {
+              const page = await this.document.getPage(pageNum)
+              const [canvas, draws, div1, div2] = this.$el.children[i].children
+              const [actualWidth, actualHeight] = this.getPageDimensions(
+                  page.view[3] / page.view[2]
+              )
+              const viewport = page.getViewport({
+                scale: Math.ceil(actualWidth / page.view[2]) + 1,
+                rotation: this.rotation,
+              })
+              const context = canvas.getContext('2d')
+              const contextDraws = draws.getContext('2d')
+              let scale = this.scale > 1 ? this.scale : 1
+              context.scale(scale, scale)
+              contextDraws.scale(scale, scale)
+              context.translate( (-canvas.width / 2) + (this.cameraOffsetX ?? 0), (-canvas.height / 2) + (this.cameraOffsetY ?? 0) )
+              contextDraws.translate( (-draws.width / 2) + (this.cameraOffsetX ?? 0), (-draws.height / 2) + (this.cameraOffsetY ?? 0) )
+              await page.render({
+                canvasContext: context,
+                viewport,
+              }).promise
+            })
+        )
+      } catch (e) {
+        console.error(e);
+      }
+    },
     async render() {
       if (!this.document) {
         return
@@ -295,7 +381,7 @@ export default {
         await Promise.all(
           this.pageNums.map(async (pageNum, i) => {
             const page = await this.document.getPage(pageNum)
-            const [canvas, div1, div2] = this.$el.children[i].children
+            const [canvas, draws, div1, div2] = this.$el.children[i].children
             const [actualWidth, actualHeight] = this.getPageDimensions(
               page.view[3] / page.view[2]
             )
@@ -308,7 +394,14 @@ export default {
               canvas.style.height = `${Math.floor(actualHeight)}px`
             }
 
-            await this.renderPage(page, canvas, actualWidth)
+            // Set the height, width and margin of the div container
+            this.$el.children[i].style.height = `${Math.floor(actualHeight)}px`
+            this.$el.children[i].style.width = `${Math.floor(actualWidth)}px`
+            this.$el.children[i].style.margin = `${Math.floor(this.margin)}px`
+            // Propagate the height to the nested canvas
+            draws.style.width = canvas.style.width
+            draws.style.height = canvas.style.height
+            await this.renderPage(page, canvas, draws, actualWidth)
 
             if (!this.disableTextLayer) {
               await this.renderPageTextLayer(page, div1, actualWidth)
@@ -326,6 +419,10 @@ export default {
 
         this.$emit('rendered')
       } catch (e) {
+        console.error(e)
+        if (e.message === 'Transport destroyed') {
+          return
+        }
         this.document = null
         this.pageCount = null
         this.pageNums = []
@@ -336,9 +433,10 @@ export default {
      * Renders the page content.
      * @param {PDFPageProxy} page - Page proxy.
      * @param {HTMLCanvasElement} canvas - HTML canvas.
+     * @param {HTMLCanvasElement} draws - HTML canvas drawings.
      * @param {number} width - Actual page width.
      */
-    async renderPage(page, canvas, width) {
+    async renderPage(page, canvas, draws, width) {
       const viewport = page.getViewport({
         scale: this.scale ?? Math.ceil(width / page.view[2]) + 1,
         rotation: this.rotation,
@@ -346,11 +444,33 @@ export default {
 
       canvas.width = viewport.width
       canvas.height = viewport.height
+      draws.width = viewport.width
+      draws.height = viewport.height
 
+      const context = canvas.getContext('2d')
+      /*
+      to optimize
+       */
+      const contextDraws = draws.getContext('2d')
+      let scale = this.scale > 1 ? this.scale : 1
+      context.scale(scale, scale)
+      contextDraws.scale(scale, scale)
+      context.translate( 0 + (this.cameraOffsetX ?? 0), 0 + (this.cameraOffsetY ?? 0) )
+      contextDraws.translate( 0 + (this.cameraOffsetX ?? 0), 0 + (this.cameraOffsetY ?? 0) )
+      /*
+      end to optimize
+       */
       await page.render({
-        canvasContext: canvas.getContext('2d'),
+        canvasContext: context,
         viewport,
       }).promise
+    },
+    handleEvent(event) {
+        this.$emit(
+          'canvasEvent',
+          event,
+          event.target.attributes.getNamedItem('page').value
+        )
     },
     /**
      * Renders the annotation layer for the specified page.

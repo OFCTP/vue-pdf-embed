@@ -15,8 +15,8 @@
     "types/*"
   ],
   "license": "MIT",
-  "author": "Aliaksei Hrynko (https://github.com/hrynko)",
-  "repository": "github:hrynko/vue-pdf-embed",
+  "author": "Le pape",
+  "repository": "github:OFCTP/vue-pdf-embed",
   "scripts": {
     "prepare": "webpack build",
     "build": "webpack build --progress",
