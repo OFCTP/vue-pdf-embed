@@ -10,6 +10,7 @@
   ],
   "main": "dist/vue3-pdf-embed.js",
   "types": "types/vue3-pdf-embed.d.ts",
+  "module": "dist/vue3-pdf-embed.js",
   "files": [
     "dist/*",
     "src/*",
