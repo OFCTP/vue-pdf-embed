@@ -1,5 +1,4 @@
-import { PDFDocumentProxy } from 'pdfjs-dist/types/display/api';
-import { ComputedOptions, DefineComponent } from 'vue';
+import { ComputedOptions, DefineComponent, MethodOptions } from 'vue';
 
 export interface VuePdfEmbedProps {
   disableAnnotationLayer?: boolean;
@@ -8,19 +7,19 @@ export interface VuePdfEmbedProps {
   imageResourcesPath?: string;
   page?: number;
   rotation?: number | string;
-  source: object | string | Uint8Array;
+  source: object | string | URL | Uint8Array;
   width?: number | string;
   margin?: number;
 }
 
 export interface VuePdfEmbedData {
-  document: PDFDocumentProxy | null;
+  document: object | null;
   pageCount: number | null;
   pageNums: number[];
 }
 
-export interface VuePdfEmbedMethods {
-  print: (dpi?: number, filename?: string) => Promise<void>;
+export interface VuePdfEmbedMethods extends MethodOptions {
+  print: (dpi?: number, filename?: string, allPages?: boolean) => Promise<void>;
   render: () => Promise<void>;
 }
 

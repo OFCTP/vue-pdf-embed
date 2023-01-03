@@ -44,7 +44,7 @@ import {
   addPrintStyles,
   createPrintIframe,
   emptyElement,
-  releaseCanvas,
+  releaseChildCanvases,
 } from './util.js'
 
 pdf.GlobalWorkerOptions.workerPort = new PdfWorker()
@@ -97,11 +97,16 @@ export default {
       },
     },
     /**
+     * Desired ratio of canvas size to document size.
+     * @values Number
+     */
+    scale: Number,
+    /**
      * Source of the document to display.
-     * @values String, URL, TypedArray
+     * @values Object, String, URL, TypedArray
      */
     source: {
-      type: [Object, String, Uint8Array],
+      type: [Object, String, URL, Uint8Array],
       required: true,
     },
     /**
@@ -118,7 +123,6 @@ export default {
      * Desired zoom
      * @values Number
      */
-    scale: Number,
     cameraOffsetX: Number,
     cameraOffsetY: Number
   },
@@ -156,28 +160,27 @@ export default {
         this.rotation,
         this.width,
       ],
-        async ([newSource], [oldSource]) => {
+      async ([newSource], [oldSource]) => {
         if (newSource !== oldSource) {
-          this.$el.querySelectorAll('canvas').forEach(releaseCanvas)
-          await this.document?.destroy()
+          releaseChildCanvases(this.$el)
           await this.load()
         }
-          await this.render()
+        this.render()
       }
     )
     /*
     optimisation ?
      */
     this.$watch(
-        () => [
-          this.scale,
-          this.cameraOffsetX,
-          this.cameraOffsetY
-        ],
-        async () => {
-          await this.render()
-          //await this.updateCanvas()
-        }
+      () => [
+        this.scale,
+        this.cameraOffsetX,
+        this.cameraOffsetY
+      ],
+      async () => {
+        await this.render()
+        //await this.updateCanvas()
+      }
     )
   },
   async mounted() {
@@ -185,11 +188,11 @@ export default {
     this.render()
   },
   beforeDestroy() {
-    this.$el.querySelectorAll('canvas').forEach(releaseCanvas)
+    releaseChildCanvases(this.$el)
     this.document?.destroy()
   },
   beforeUnmount() {
-    this.$el.querySelectorAll('canvas').forEach(releaseCanvas)
+    releaseChildCanvases(this.$el)
     this.document?.destroy()
   },
   methods: {
@@ -227,6 +230,9 @@ export default {
           this.document = this.source
         } else {
           const documentLoadingTask = pdf.getDocument(this.source)
+          documentLoadingTask.onProgress = (progressParams) => {
+            this.$emit('progress', progressParams)
+          }
           documentLoadingTask.onPassword = (callback, reason) => {
             const retry = reason === pdf.PasswordResponses.INCORRECT_PASSWORD
             this.$emit('password-requested', callback, retry)
@@ -249,9 +255,10 @@ export default {
      *
      * @param {number} dpi - Print resolution.
      * @param {string} filename - Predefined filename to save.
+     * @param {boolean} allPages - Ignore page prop to print all pages.
      */
-    async print(dpi = 300, filename = '') {
-      if (!this.document || !this.pageNums.length) {
+    async print(dpi = 300, filename = '', allPages = false) {
+      if (!this.document) {
         return
       }
 
@@ -265,8 +272,13 @@ export default {
         window.document.body.appendChild(container)
         iframe = await createPrintIframe(container)
 
+        const pageNums =
+          this.page && !allPages
+            ? [this.page]
+            : [...Array(this.document.numPages + 1).keys()].slice(1)
+
         await Promise.all(
-          this.pageNums.map(async (pageNum, i) => {
+          pageNums.map(async (pageNum, i) => {
             const page = await this.document.getPage(pageNum)
             const viewport = page.getViewport({ scale: 1 })
 
@@ -305,13 +317,12 @@ export default {
         console.error(e)
         this.$emit('printing-failed', e)
       } finally {
-        if (filename && title) {
+        if (title) {
           window.document.title = title
         }
 
-        if (container) {
-          container.parentNode.removeChild(container)
-        }
+        releaseChildCanvases(container)
+        container.parentNode?.removeChild(container)
       }
     },
     /**
@@ -421,16 +432,14 @@ export default {
      * Renders the page content.
      * @param {PDFPageProxy} page - Page proxy.
      * @param {HTMLCanvasElement} canvas - HTML canvas.
-     * @param {HTMLCanvasElement} canvas - HTML canvas drawings.
+     * @param {HTMLCanvasElement} draws - HTML canvas drawings.
      * @param {number} width - Actual page width.
      */
     async renderPage(page, canvas, draws, width) {
       const viewport = page.getViewport({
-        scale: Math.ceil(width / page.view[2]) + 1,
+        scale: this.scale ?? Math.ceil(width / page.view[2]) + 1,
         rotation: this.rotation,
       })
-
-      //console.log(viewport)
 
       canvas.width = viewport.width
       canvas.height = viewport.height
@@ -505,11 +514,6 @@ export default {
       }).promise
     },
   },
-  // watch: {
-  //   scale: function (val) {
-  //     this.render()
-  //   }
-  // }
 }
 </script>
 

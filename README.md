@@ -65,7 +65,7 @@ export default {
       source1: '<PDF_URL>',
       source2: 'data:application/pdf;base64,<BASE64_ENCODED_PDF>',
     }
-  }
+  },
 }
 </script>
 ```
@@ -80,6 +80,7 @@ export default {
 | imageResourcesPath     | `string`                                 | URL or path with trailing slash                  | path for icons used in the annotation layer                                |
 | page                   | `number`                                 | `1` to the last page number                      | number of the page to display (displays all pages if not specified)        |
 | rotation               | `number` <br> `string`                   | `0`, `90`, `180` or `270` (multiples of `90`)    | desired page rotation angle in degrees                                     |
+| scale                  | `number`                                 | rational numbers                                 | desired ratio of canvas size to document size                              |
 | source                 | `string` <br> `object` <br> `Uint8Array` | document URL or typed array pre-filled with data | source of the document to display                                          |
 | width                  | `number` <br> `string`                   | natural numbers                                  | desired page width in pixels                                               |
 
@@ -94,13 +95,15 @@ export default {
 | rendering-failed      | error object                  | failed to render document                  |
 | rendered              | –                             | finished rendering the document            |
 | printing-failed       | error object                  | failed to print document                   |
+| progress              | progress params object        | tracking document loading progress         |
 
 ### Public Methods
 
-| Name   | Arguments                                        | Description                          |
-| ------ | ------------------------------------------------ | ------------------------------------ |
-| render | –                                                | manually (re)render document         |
-| print  | print resolution (`number`), filename (`string`) | print document via browser interface |
+| Name   | Arguments                                                                    | Description                          |
+| ------ | ---------------------------------------------------------------------------- | ------------------------------------ |
+| render | –                                                                            | manually (re)render document         |
+| print  | print resolution (`number`), filename (`string`), all pages flag (`boolean`) | print document via browser interface |
+| progress              | progress params object        | tracking document loading progress         |
 
 ### Static Methods
 
@@ -111,6 +114,8 @@ Besides the component itself, the module also includes a `getDocument` function 
 [Basic Usage Demo (JSFiddle)](https://jsfiddle.net/hrynko/ct6p8r7k)
 
 [Advanced Usage Demo (JSFiddle)](https://jsfiddle.net/hrynko/we7p5uq4)
+
+[Advanced Usage Demo (StackBlitz)](https://stackblitz.com/fork/vue-pdf-embed)
 
 ## License
 

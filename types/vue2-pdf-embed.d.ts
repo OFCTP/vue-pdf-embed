@@ -7,7 +7,7 @@ export interface VuePdfEmbedProps {
   imageResourcesPath?: string;
   page?: number;
   rotation?: number | string;
-  source: object | string | Uint8Array;
+  source: object | string | URL | Uint8Array;
   width?: number | string;
 }
 
@@ -18,7 +18,7 @@ export interface VuePdfEmbedData {
 }
 
 export interface VuePdfEmbedMethods {
-  print: (dpi?: number, filename?: string) => Promise<void>;
+  print: (dpi?: number, filename?: string, allPages?: boolean) => Promise<void>;
   render: () => Promise<void>;
 }
 

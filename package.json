@@ -1,7 +1,6 @@
 {
   "name": "vue-pdf-embed",
-  "repository": "github:com:damienpayet50320/vue-pdf-embed",
-  "version": "1.1.4",
+  "version": "1.1.5",
   "description": "PDF embed component for Vue 2 and Vue 3",
   "keywords": [
     "vue",
@@ -10,14 +9,14 @@
   ],
   "main": "dist/vue3-pdf-embed.js",
   "types": "types/vue3-pdf-embed.d.ts",
-  "module": "dist/vue3-pdf-embed.js",
   "files": [
     "dist/*",
     "src/*",
     "types/*"
   ],
   "license": "MIT",
-  "author": "Aliaksei Hrynko (https://github.com/hrynko)",
+  "author": "Le pape",
+  "repository": "github:OFCTP/vue-pdf-embed",
   "scripts": {
     "prepare": "webpack build",
     "build": "webpack build --progress",
@@ -26,7 +25,6 @@
     "lint": "eslint \"**/*.{js,vue}\"",
     "lint:fix": "eslint \"**/*.{js,vue}\" --fix"
   },
-  "dependencies": {},
   "devDependencies": {
     "@babel/core": "^7.14.2",
     "@babel/preset-env": "^7.14.2",
