@@ -95,13 +95,14 @@ export default {
 | rendering-failed      | error object                  | failed to render document                  |
 | rendered              | –                             | finished rendering the document            |
 | printing-failed       | error object                  | failed to print document                   |
+| progress              | progress params object        | tracking document loading progress         |
 
 ### Public Methods
 
-| Name   | Arguments                                        | Description                          |
-| ------ | ------------------------------------------------ | ------------------------------------ |
-| render | –                                                | manually (re)render document         |
-| print  | print resolution (`number`), filename (`string`) | print document via browser interface |
+| Name   | Arguments                                                                    | Description                          |
+| ------ | ---------------------------------------------------------------------------- | ------------------------------------ |
+| render | –                                                                            | manually (re)render document         |
+| print  | print resolution (`number`), filename (`string`), all pages flag (`boolean`) | print document via browser interface |
 | progress              | progress params object        | tracking document loading progress         |
 
 ### Static Methods

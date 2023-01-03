@@ -44,7 +44,6 @@ import {
   addPrintStyles,
   createPrintIframe,
   emptyElement,
-  releaseCanvas,
   releaseChildCanvases,
 } from './util.js'
 
