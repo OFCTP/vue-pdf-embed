@@ -18,7 +18,6 @@
   "author": "Le pape",
   "repository": "github:OFCTP/vue-pdf-embed",
   "scripts": {
-    "prepare": "webpack build",
     "build": "webpack build --progress",
     "serve": "webpack serve --config webpack.dev.config.js --hot",
     "test": "jest",
@@ -31,6 +30,7 @@
     "@vue/compiler-sfc": "^3.0.11",
     "babel-jest": "^26.6.3",
     "babel-loader": "^8.2.2",
+    "caniuse-lite": "^1.0.30001441",
     "copy-webpack-plugin": "^9.1.0",
     "css-loader": "^5.2.6",
     "eslint": "^7.27.0",
@@ -48,7 +48,7 @@
     "vue": "^2.6.12",
     "vue-jest": "^4.0.1",
     "vue-loader": "^15.9.7",
-    "vue-loader-next": "npm:vue-loader@^16.2.0",
+    "vue-loader-next": "npm:vue-loader@^16.8.0",
     "vue-style-loader": "^4.1.3",
     "vue-template-compiler": "^2.6.12",
     "webpack": "^5.37.1",
@@ -59,5 +59,7 @@
   },
   "peerDependencies": {
     "vue": "^2.x || ^3.x"
+  },
+  "dependencies": {
   }
 }

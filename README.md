@@ -120,3 +120,28 @@ Besides the component itself, the module also includes a `getDocument` function 
 ## License
 
 MIT License. Please see [LICENSE file](LICENSE) for more information.
+
+## Dev
+
+In order to dev new features, you have to install node_modules using :  
+
+`NODE_OPTIONS=--openssl-legacy-provider npm i --legacy-peer-deps`
+
+NB : The `NODE_OPTIONS` env is a tweak that allows us to compile on Node 18 but it's not secure. Also, the `--legacy-peer-deps` is required because npm has to install both vue2 and vue3 in this project (which confuses it).  
+
+## Publish new version with GIT
+
+Previously, package was built when installing it via npm into a project.  
+This took ages and the build would fail sometimes, which was boring.  
+
+Now, the `dist` directory contains the build with the packaged module and is versionned with GIT.  
+
+To update it before a commit you should simply run :  
+`NODE_OPTIONS=--openssl-legacy-provider npm run build`  
+
+Then you can commit and a new version will be published
+
+## Yarn
+
+For weird reason, yarn can install but not build...  
+I tried to investigate but time was running out so feel free to set up yarn in this project !  
