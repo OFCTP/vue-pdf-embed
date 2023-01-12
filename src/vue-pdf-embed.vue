@@ -168,9 +168,9 @@ export default {
     this.$watch(
       () => [this.scale, this.cameraOffsetX, this.cameraOffsetY],
       async () => {
+        await this.update()
         // TODO : THIS CAUSES FLICKERING AND SHOULD BE OPTIMIZED !
-        await this.render()
-        //await this.updateCanvas()
+        // await this.render()
       }
     )
   },
@@ -299,6 +299,51 @@ export default {
       }
     },
 
+    async update() {
+      if (!this.document) {
+        return
+      }
+
+      try {
+        this.pageNums = this.page
+          ? [this.page]
+          : [...Array(this.document.numPages + 1).keys()].slice(1)
+
+        await Promise.all(
+          this.pageNums.map(async (pageNum, i) => {
+            const page = await this.document.getPage(pageNum)
+            const [canvas, draws] = this.$el.children[i].children
+            const [actualWidth, actualHeight] = this.getPageDimensions(
+              page.view[3] / page.view[2]
+            )
+
+            if ((this.rotation / 90) % 2) {
+              canvas.style.width = `${Math.floor(actualHeight)}px`
+              // canvas.style.height = `${Math.floor(actualWidth)}px`
+            } else {
+              canvas.style.width = `${Math.floor(actualWidth)}px`
+              // canvas.style.height = `${Math.floor(actualHeight)}px`
+            }
+
+            // Propagate the height to the nested canvas
+            draws.style.width = canvas.style.width
+            // draws.style.height = canvas.style.height
+
+            // set margins
+            canvas.style.margin = `${Math.floor(this.margin)}px`
+            draws.style.margin = `${Math.floor(this.margin)}px`
+
+            this.updatePage(page, canvas, draws, actualWidth)
+          })
+        )
+      } catch (e) {
+        this.document = null
+        this.pageCount = null
+        this.pageNums = []
+        this.$emit('update-failed', e)
+      }
+    },
+
     /**
      * Renders the page content.
      * @param {PDFPageProxy} page - Page proxy.
@@ -327,10 +372,24 @@ export default {
         canvasContext: canvas.getContext('2d'),
         viewport,
       }).promise
+    },
 
-      console.log('TWEAK : cancel canvas and draws heights')
-      canvas.style.height = null
-      draws.style.height = null
+    updatePage(page, canvas, draws, width) {
+      const viewport = page.getViewport({
+        scale: Math.ceil(width / page.view[2]) + 1,
+        rotation: this.rotation,
+      })
+
+      canvas.width = draws.width = viewport.width
+      canvas.height = draws.height = viewport.height
+
+      const context = canvas.getContext('2d')
+      const contextDraws = draws.getContext('2d')
+      let scale = Math.max(this.scale, 1)
+      context.scale(scale, scale)
+      contextDraws.scale(scale, scale)
+      context.translate(this.cameraOffsetX ?? 0, this.cameraOffsetY ?? 0)
+      contextDraws.translate(this.cameraOffsetX ?? 0, this.cameraOffsetY ?? 0)
     },
 
     handleEvent(event) {
