@@ -313,27 +313,7 @@ export default {
           this.pageNums.map(async (pageNum, i) => {
             const page = await this.document.getPage(pageNum)
             const [canvas, draws] = this.$el.children[i].children
-            const [actualWidth, actualHeight] = this.getPageDimensions(
-              page.view[3] / page.view[2]
-            )
-
-            if ((this.rotation / 90) % 2) {
-              canvas.style.width = `${Math.floor(actualHeight)}px`
-              // canvas.style.height = `${Math.floor(actualWidth)}px`
-            } else {
-              canvas.style.width = `${Math.floor(actualWidth)}px`
-              // canvas.style.height = `${Math.floor(actualHeight)}px`
-            }
-
-            // Propagate the height to the nested canvas
-            draws.style.width = canvas.style.width
-            // draws.style.height = canvas.style.height
-
-            // set margins
-            canvas.style.margin = `${Math.floor(this.margin)}px`
-            draws.style.margin = `${Math.floor(this.margin)}px`
-
-            this.updatePage(page, canvas, draws, actualWidth)
+            this.updatePage(page, canvas, draws)
           })
         )
       } catch (e) {
@@ -374,15 +354,7 @@ export default {
       }).promise
     },
 
-    updatePage(page, canvas, draws, width) {
-      const viewport = page.getViewport({
-        scale: Math.ceil(width / page.view[2]) + 1,
-        rotation: this.rotation,
-      })
-
-      canvas.width = draws.width = viewport.width
-      canvas.height = draws.height = viewport.height
-
+    updatePage(page, canvas, draws) {
       const context = canvas.getContext('2d')
       const contextDraws = draws.getContext('2d')
       let scale = Math.max(this.scale, 1)
