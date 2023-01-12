@@ -260,15 +260,15 @@ export default {
 
             if ((this.rotation / 90) % 2) {
               canvas.style.width = `${Math.floor(actualHeight)}px`
-              canvas.style.height = `${Math.floor(actualWidth)}px`
+              // canvas.style.height = `${Math.floor(actualWidth)}px`
             } else {
               canvas.style.width = `${Math.floor(actualWidth)}px`
-              canvas.style.height = `${Math.floor(actualHeight)}px`
+              // canvas.style.height = `${Math.floor(actualHeight)}px`
             }
 
             // Propagate the height to the nested canvas
             draws.style.width = canvas.style.width
-            draws.style.height = canvas.style.height
+            // draws.style.height = canvas.style.height
 
             // set margins
             canvas.style.margin = `${Math.floor(this.margin)}px`
