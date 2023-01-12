@@ -315,11 +315,51 @@ export default {
     //     container.parentNode?.removeChild(container);
     //   }
     // },
-    /**
-     * Renders the PDF document as SVG element(s) and additional layers.
-     *
-     * NOTE: Ignored if the document is not loaded.
-     */
+
+    async updateCanvas() {
+      console.log('updateCanvas')
+      if (!this.document) {
+        return
+      }
+      try {
+        this.pageNums = this.page
+          ? [this.page]
+          : [...Array(this.document.numPages + 1).keys()].slice(1)
+        await Promise.all(
+          this.pageNums.map(async (pageNum, i) => {
+            const page = await this.document.getPage(pageNum)
+            const [canvas, draws] = this.$el.children[i].children
+            const [actualWidth] = this.getPageDimensions(
+              page.view[3] / page.view[2]
+            )
+            const viewport = page.getViewport({
+              scale: Math.ceil(actualWidth / page.view[2]) + 1,
+              rotation: this.rotation,
+            })
+            const context = canvas.getContext('2d')
+            const contextDraws = draws.getContext('2d')
+            let scale = this.scale > 1 ? this.scale : 1
+            context.scale(scale, scale)
+            contextDraws.scale(scale, scale)
+            context.translate(
+              -canvas.width / 2 + (this.cameraOffsetX ?? 0),
+              -canvas.height / 2 + (this.cameraOffsetY ?? 0)
+            )
+            contextDraws.translate(
+              -draws.width / 2 + (this.cameraOffsetX ?? 0),
+              -draws.height / 2 + (this.cameraOffsetY ?? 0)
+            )
+            await page.render({
+              canvasContext: context,
+              viewport,
+            }).promise
+          })
+        )
+      } catch (e) {
+        console.error(e)
+      }
+    },
+
     async render() {
       if (!this.document) {
         return
