@@ -4,12 +4,34 @@
       v-for="pageNum in pageNums"
       :key="pageNum"
       :id="id && `${id}-${pageNum}`"
+      style="position: relative"
     >
-      <canvas />
+      <canvas
+        :id="`canvas-${pageNum}`"
+        :ref="`canvas-${pageNum}`"
+        style="z-index: 0; position: absolute"
+      />
+      <canvas
+        :id="`canvas-${pageNum}-draws`"
+        :ref="`canvas-${pageNum}-draws`"
+        :page="`${pageNum}`"
+        style="z-index: 30; position: absolute"
+        @click="handleEvent"
+        @mousedown="handleEvent"
+        @mouseup="handleEvent"
+        @mousemove="handleEvent"
+        @touchstart="handleEvent"
+        @touchend="handleEvent"
+        @touchmove="handleEvent"
+        @wheel="handleEvent"
+        @scroll="handleEvent"
+      />
 
       <div v-if="!disableTextLayer" class="textLayer" />
 
       <div v-if="!disableAnnotationLayer" class="annotationLayer" />
+
+      <div style="clear: both"></div>
     </div>
   </div>
 </template>
@@ -19,8 +41,8 @@ import * as pdf from 'pdfjs-dist/legacy/build/pdf.js'
 import PdfWorker from 'pdfjs-dist/legacy/build/pdf.worker.js'
 import { PDFLinkService } from 'pdfjs-dist/legacy/web/pdf_viewer.js'
 import {
-  addPrintStyles,
-  createPrintIframe,
+  // addPrintStyles,
+  // createPrintIframe,
   emptyElement,
   releaseChildCanvases,
 } from './util.js'
@@ -92,6 +114,13 @@ export default {
      * @values Number, String
      */
     width: [Number, String],
+    /**
+     * Desired margin between pages
+     * @values Number
+     */
+    margin: Number,
+    cameraOffsetX: Number,
+    cameraOffsetY: Number,
   },
   data() {
     return {
@@ -130,9 +159,18 @@ export default {
       async ([newSource], [oldSource]) => {
         if (newSource !== oldSource) {
           releaseChildCanvases(this.$el)
+          await this.document?.destroy()
           await this.load()
         }
-        this.render()
+        await this.render()
+      }
+    )
+    this.$watch(
+      () => [this.scale, this.cameraOffsetX, this.cameraOffsetY],
+      async () => {
+        // TODO : THIS CAUSES FLICKERING AND SHOULD BE OPTIMIZED !
+        await this.render()
+        //await this.updateCanvas()
       }
     )
   },
@@ -210,73 +248,73 @@ export default {
      * @param {string} filename - Predefined filename to save.
      * @param {boolean} allPages - Ignore page prop to print all pages.
      */
-    async print(dpi = 300, filename = '', allPages = false) {
-      if (!this.document) {
-        return
-      }
-
-      const printUnits = dpi / 72
-      const styleUnits = 96 / 72
-      let container, iframe, title
-
-      try {
-        container = document.createElement('div')
-        container.style.display = 'none'
-        window.document.body.appendChild(container)
-        iframe = await createPrintIframe(container)
-
-        const pageNums =
-          this.page && !allPages
-            ? [this.page]
-            : [...Array(this.document.numPages + 1).keys()].slice(1)
-
-        await Promise.all(
-          pageNums.map(async (pageNum, i) => {
-            const page = await this.document.getPage(pageNum)
-            const viewport = page.getViewport({ scale: 1 })
-
-            if (i === 0) {
-              const sizeX = (viewport.width * printUnits) / styleUnits
-              const sizeY = (viewport.height * printUnits) / styleUnits
-              addPrintStyles(iframe, sizeX, sizeY)
-            }
-
-            const canvas = document.createElement('canvas')
-            canvas.width = viewport.width * printUnits
-            canvas.height = viewport.height * printUnits
-            container.appendChild(canvas)
-            const canvasClone = canvas.cloneNode()
-            iframe.contentWindow.document.body.appendChild(canvasClone)
-
-            await page.render({
-              canvasContext: canvas.getContext('2d'),
-              intent: 'print',
-              transform: [printUnits, 0, 0, printUnits, 0, 0],
-              viewport,
-            }).promise
-
-            canvasClone.getContext('2d').drawImage(canvas, 0, 0)
-          })
-        )
-
-        if (filename) {
-          title = window.document.title
-          window.document.title = filename
-        }
-
-        iframe.contentWindow.focus()
-        iframe.contentWindow.print()
-      } catch (e) {
-        this.$emit('printing-failed', e)
-      } finally {
-        if (title) {
-          window.document.title = title
-        }
-
-        releaseChildCanvases(container)
-        container.parentNode?.removeChild(container)
-      }
-    },
+    // async print (dpi = 300, filename = "", allPages = false) {
+    //   if (!this.document) {
+    //     return;
+    //   }
+    //
+    //   const printUnits = dpi / 72;
+    //   const styleUnits = 96 / 72;
+    //   let container, iframe, title;
+    //
+    //   try {
+    //     container = document.createElement("div");
+    //     container.style.display = "none";
+    //     window.document.body.appendChild(container);
+    //     iframe = await createPrintIframe(container);
+    //
+    //     const pageNums =
+    //       this.page && !allPages
+    //         ? [ this.page ]
+    //         : [ ...Array(this.document.numPages + 1).keys() ].slice(1);
+    //
+    //     await Promise.all(
+    //       pageNums.map(async (pageNum, i) => {
+    //         const page = await this.document.getPage(pageNum);
+    //         const viewport = page.getViewport({ scale: 1 });
+    //
+    //         if (i === 0) {
+    //           const sizeX = (viewport.width * printUnits) / styleUnits;
+    //           const sizeY = (viewport.height * printUnits) / styleUnits;
+    //           addPrintStyles(iframe, sizeX, sizeY);
+    //         }
+    //
+    //         const canvas = document.createElement("canvas");
+    //         canvas.width = viewport.width * printUnits;
+    //         canvas.height = viewport.height * printUnits;
+    //         container.appendChild(canvas);
+    //         const canvasClone = canvas.cloneNode();
+    //         iframe.contentWindow.document.body.appendChild(canvasClone);
+    //
+    //         await page.render({
+    //           canvasContext: canvas.getContext("2d"),
+    //           intent: "print",
+    //           transform: [ printUnits, 0, 0, printUnits, 0, 0 ],
+    //           viewport
+    //         }).promise;
+    //
+    //         canvasClone.getContext("2d").drawImage(canvas, 0, 0);
+    //       })
+    //     );
+    //
+    //     if (filename) {
+    //       title = window.document.title;
+    //       window.document.title = filename;
+    //     }
+    //
+    //     iframe.contentWindow.focus();
+    //     iframe.contentWindow.print();
+    //   } catch (e) {
+    //     this.$emit("printing-failed", e);
+    //   } finally {
+    //     if (title) {
+    //       window.document.title = title;
+    //     }
+    //
+    //     releaseChildCanvases(container);
+    //     container.parentNode?.removeChild(container);
+    //   }
+    // },
     /**
      * Renders the PDF document as SVG element(s) and additional layers.
      *
@@ -295,7 +333,7 @@ export default {
         await Promise.all(
           this.pageNums.map(async (pageNum, i) => {
             const page = await this.document.getPage(pageNum)
-            const [canvas, div1, div2] = this.$el.children[i].children
+            const [canvas, draws, div1, div2] = this.$el.children[i].children
             const [actualWidth, actualHeight] = this.getPageDimensions(
               page.view[3] / page.view[2]
             )
@@ -308,7 +346,15 @@ export default {
               canvas.style.height = `${Math.floor(actualHeight)}px`
             }
 
-            await this.renderPage(page, canvas, actualWidth)
+            // Propagate the height to the nested canvas
+            draws.style.width = canvas.style.width
+            draws.style.height = canvas.style.height
+
+            // set margins
+            canvas.style.margin = `${Math.floor(this.margin)}px`
+            draws.style.margin = `${Math.floor(this.margin)}px`
+
+            await this.renderPage(page, canvas, draws, actualWidth)
 
             if (!this.disableTextLayer) {
               await this.renderPageTextLayer(page, div1, actualWidth)
@@ -336,21 +382,43 @@ export default {
      * Renders the page content.
      * @param {PDFPageProxy} page - Page proxy.
      * @param {HTMLCanvasElement} canvas - HTML canvas.
+     * @param {HTMLCanvasElement} draws - HTML canvas drawings.
      * @param {number} width - Actual page width.
      */
-    async renderPage(page, canvas, width) {
+    async renderPage(page, canvas, draws, width) {
       const viewport = page.getViewport({
         scale: this.scale ?? Math.ceil(width / page.view[2]) + 1,
+        // offsetX: this.cameraOffsetX,
+        // offsetY: this.cameraOffsetY,
         rotation: this.rotation,
       })
 
-      canvas.width = viewport.width
-      canvas.height = viewport.height
+      canvas.width = draws.width = viewport.width
+      canvas.height = draws.height = viewport.height
+
+      const context = canvas.getContext('2d')
+      const contextDraws = draws.getContext('2d')
+      let scale = Math.max(this.scale, 1)
+      context.scale(scale, scale)
+      contextDraws.scale(scale, scale)
+      context.translate(this.cameraOffsetX ?? 0, this.cameraOffsetY ?? 0)
+      contextDraws.translate(this.cameraOffsetX ?? 0, this.cameraOffsetY ?? 0)
 
       await page.render({
         canvasContext: canvas.getContext('2d'),
         viewport,
       }).promise
+
+      console.log('TWEAK : cancel canvas and draws heights')
+      canvas.style.height = null
+      draws.style.height = null
+    },
+    handleEvent(event) {
+      this.$emit(
+        'canvasEvent',
+        event,
+        event.target.attributes.getNamedItem('page').value
+      )
     },
     /**
      * Renders the annotation layer for the specified page.
