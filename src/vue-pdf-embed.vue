@@ -239,126 +239,6 @@ export default {
         this.$emit('loading-failed', e)
       }
     },
-    /**
-     * Prints a PDF document via the browser interface.
-     *
-     * NOTE: Ignored if the document is not loaded.
-     *
-     * @param {number} dpi - Print resolution.
-     * @param {string} filename - Predefined filename to save.
-     * @param {boolean} allPages - Ignore page prop to print all pages.
-     */
-    // async print (dpi = 300, filename = "", allPages = false) {
-    //   if (!this.document) {
-    //     return;
-    //   }
-    //
-    //   const printUnits = dpi / 72;
-    //   const styleUnits = 96 / 72;
-    //   let container, iframe, title;
-    //
-    //   try {
-    //     container = document.createElement("div");
-    //     container.style.display = "none";
-    //     window.document.body.appendChild(container);
-    //     iframe = await createPrintIframe(container);
-    //
-    //     const pageNums =
-    //       this.page && !allPages
-    //         ? [ this.page ]
-    //         : [ ...Array(this.document.numPages + 1).keys() ].slice(1);
-    //
-    //     await Promise.all(
-    //       pageNums.map(async (pageNum, i) => {
-    //         const page = await this.document.getPage(pageNum);
-    //         const viewport = page.getViewport({ scale: 1 });
-    //
-    //         if (i === 0) {
-    //           const sizeX = (viewport.width * printUnits) / styleUnits;
-    //           const sizeY = (viewport.height * printUnits) / styleUnits;
-    //           addPrintStyles(iframe, sizeX, sizeY);
-    //         }
-    //
-    //         const canvas = document.createElement("canvas");
-    //         canvas.width = viewport.width * printUnits;
-    //         canvas.height = viewport.height * printUnits;
-    //         container.appendChild(canvas);
-    //         const canvasClone = canvas.cloneNode();
-    //         iframe.contentWindow.document.body.appendChild(canvasClone);
-    //
-    //         await page.render({
-    //           canvasContext: canvas.getContext("2d"),
-    //           intent: "print",
-    //           transform: [ printUnits, 0, 0, printUnits, 0, 0 ],
-    //           viewport
-    //         }).promise;
-    //
-    //         canvasClone.getContext("2d").drawImage(canvas, 0, 0);
-    //       })
-    //     );
-    //
-    //     if (filename) {
-    //       title = window.document.title;
-    //       window.document.title = filename;
-    //     }
-    //
-    //     iframe.contentWindow.focus();
-    //     iframe.contentWindow.print();
-    //   } catch (e) {
-    //     this.$emit("printing-failed", e);
-    //   } finally {
-    //     if (title) {
-    //       window.document.title = title;
-    //     }
-    //
-    //     releaseChildCanvases(container);
-    //     container.parentNode?.removeChild(container);
-    //   }
-    // },
-
-    async updateCanvas() {
-      console.log('updateCanvas')
-      if (!this.document) {
-        return
-      }
-      try {
-        this.pageNums = this.page
-          ? [this.page]
-          : [...Array(this.document.numPages + 1).keys()].slice(1)
-        await Promise.all(
-          this.pageNums.map(async (pageNum, i) => {
-            const page = await this.document.getPage(pageNum)
-            const [canvas, draws] = this.$el.children[i].children
-            const [actualWidth] = this.getPageDimensions(
-              page.view[3] / page.view[2]
-            )
-            const viewport = page.getViewport({
-              scale: Math.ceil(actualWidth / page.view[2]) + 1,
-              rotation: this.rotation,
-            })
-            const context = canvas.getContext('2d')
-            const contextDraws = draws.getContext('2d')
-            let scale = this.scale > 1 ? this.scale : 1
-            context.scale(scale, scale)
-            contextDraws.scale(scale, scale)
-            context.translate(
-              -canvas.width / 2 + (this.cameraOffsetX ?? 0),
-              -canvas.height / 2 + (this.cameraOffsetY ?? 0)
-            )
-            contextDraws.translate(
-              -draws.width / 2 + (this.cameraOffsetX ?? 0),
-              -draws.height / 2 + (this.cameraOffsetY ?? 0)
-            )
-            await page.render({
-              canvasContext: context,
-              viewport,
-            }).promise
-          })
-        )
-      } catch (e) {
-        console.error(e)
-      }
-    },
 
     async render() {
       if (!this.document) {
@@ -418,6 +298,7 @@ export default {
         this.$emit('rendering-failed', e)
       }
     },
+
     /**
      * Renders the page content.
      * @param {PDFPageProxy} page - Page proxy.
@@ -427,9 +308,7 @@ export default {
      */
     async renderPage(page, canvas, draws, width) {
       const viewport = page.getViewport({
-        scale: this.scale ?? Math.ceil(width / page.view[2]) + 1,
-        // offsetX: this.cameraOffsetX,
-        // offsetY: this.cameraOffsetY,
+        scale: Math.ceil(width / page.view[2]) + 1,
         rotation: this.rotation,
       })
 
@@ -453,6 +332,7 @@ export default {
       canvas.style.height = null
       draws.style.height = null
     },
+
     handleEvent(event) {
       this.$emit(
         'canvasEvent',
