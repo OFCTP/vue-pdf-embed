@@ -170,11 +170,10 @@ export default {
     this.$watch(
       () => [this.cameraOffsetX, this.cameraOffsetY],
       () => {
+        // TODO : THIS CAUSES FLICKERING AND SHOULD BE OPTIMIZED !
         console.log('offset changed...', this.cameraOffsetX, this.cameraOffsetY)
-        this.update()
+        this.render()
       }
-      // TODO : THIS CAUSES FLICKERING AND SHOULD BE OPTIMIZED !
-      // async () =>  await this.render()
     )
   },
   async mounted() {
@@ -334,43 +333,27 @@ export default {
      */
     async renderPage(page, canvas, draws, width) {
       const viewport = page.getViewport({
-        scale: this.scale,
+        scale: Math.ceil(width / page.view[2]) + 1,
         rotation: this.rotation,
-        offsetX: this.cameraOffsetX,
-        offsetY: this.cameraOffsetY,
+        // offsetX: this.cameraOffsetX,
+        // offsetY: this.cameraOffsetY,
       })
 
-      // Support HiDPI-screens.
-      const outputScale = window.devicePixelRatio || 1
-      canvas.width = Math.floor(viewport.width * outputScale);
-      canvas.height = Math.floor(viewport.height * outputScale);
-      canvas.style.width = '100%'
-      // canvas.style.height =  Math.floor(viewport.height) + "px";
+      canvas.width = draws.width = viewport.width
+      canvas.height = draws.height = viewport.height
 
-      const transform =
-        outputScale !== 1 ? [outputScale, 0, 0, outputScale, 0, 0] : null
+      const context = canvas.getContext('2d')
+      const contextDraws = draws.getContext('2d')
+      let scale = Math.max(this.scale, 1)
+      context.scale(scale, scale)
+      contextDraws.scale(scale, scale)
+      context.translate(this.cameraOffsetX ?? 0, this.cameraOffsetY ?? 0)
+      contextDraws.translate(this.cameraOffsetX ?? 0, this.cameraOffsetY ?? 0)
 
       await page.render({
         canvasContext: canvas.getContext('2d'),
-        transform: transform,
-        viewport: viewport,
+        viewport,
       }).promise
-
-      // canvas.width = draws.width = viewport.width
-      // canvas.height = draws.height = viewport.height
-
-      // const context = canvas.getContext('2d')
-      // const contextDraws = draws.getContext('2d')
-      // let scale = Math.max(this.scale, 1)
-      // context.scale(scale, scale)
-      // contextDraws.scale(scale, scale)
-      // context.translate(this.cameraOffsetX ?? 0, this.cameraOffsetY ?? 0)
-      // contextDraws.translate(this.cameraOffsetX ?? 0, this.cameraOffsetY ?? 0)
-
-      // await page.render({
-      //   canvasContext: canvas.getContext("2d"),
-      //   viewport
-      // }).promise;
     },
 
     updatePage(page, canvas, draws) {
