@@ -155,22 +155,15 @@ export default {
         this.page,
         this.rotation,
         this.width,
+        this.scale
       ],
       async ([newSource], [oldSource]) => {
-        console.log('something changed:', newSource, oldSource)
         if (newSource !== oldSource) {
-          console.log('reset document')
+          console.log('source changed, reset document...', newSource)
           releaseChildCanvases(this.$el)
           await this.document?.destroy()
           await this.load()
         }
-        await this.render()
-      }
-    )
-    this.$watch(
-      () => [this.scale],
-      async () => {
-        console.log('scale changed...', this.scale)
         await this.render()
       }
     )
@@ -318,6 +311,8 @@ export default {
           ? [this.page]
           : [...Array(this.document.numPages + 1).keys()].slice(1)
 
+        console.log('updating...', this.pageNums)
+
         await Promise.all(
           this.pageNums.map(async (pageNum, i) => {
             const page = await this.document.getPage(pageNum)
@@ -364,6 +359,7 @@ export default {
     },
 
     updatePage(page, canvas, draws) {
+      console.log('updating page', page)
       const context = canvas.getContext('2d')
       const contextDraws = draws.getContext('2d')
       context.translate(this.cameraOffsetX ?? 0, this.cameraOffsetY ?? 0)
