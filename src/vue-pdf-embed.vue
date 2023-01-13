@@ -157,7 +157,9 @@ export default {
         this.width,
       ],
       async ([newSource], [oldSource]) => {
+        console.log('something changed:', newSource, oldSource)
         if (newSource !== oldSource) {
+          console.log('reset document')
           releaseChildCanvases(this.$el)
           await this.document?.destroy()
           await this.load()
@@ -166,23 +168,27 @@ export default {
       }
     )
     this.$watch(
-      () => [this.scale, this.cameraOffsetX, this.cameraOffsetY],
+      () => [this.scale],
       async () => {
-        await this.update()
-        // TODO : THIS CAUSES FLICKERING AND SHOULD BE OPTIMIZED !
-        // await this.render()
+        console.log('scale changed...', this.scale)
+        await this.render()
       }
+    )
+    this.$watch(
+      () => [this.cameraOffsetX, this.cameraOffsetY],
+      async () => {
+        console.log('offset changed...', this.cameraOffsetX, this.cameraOffsetY)
+        await this.update()
+      }
+      // TODO : THIS CAUSES FLICKERING AND SHOULD BE OPTIMIZED !
+      // async () =>  await this.render()
     )
   },
   async mounted() {
     await this.load()
-    this.render()
+    await this.render()
   },
   beforeDestroy() {
-    releaseChildCanvases(this.$el)
-    this.document?.destroy()
-  },
-  beforeUnmount() {
     releaseChildCanvases(this.$el)
     this.document?.destroy()
   },
@@ -216,6 +222,8 @@ export default {
         return
       }
 
+      console.log('loading document...', this.source)
+
       try {
         if (this.source._pdfInfo) {
           this.document = this.source
@@ -231,6 +239,7 @@ export default {
           this.document = await documentLoadingTask.promise
         }
         this.pageCount = this.document.numPages
+        console.log('document loaded !')
         this.$emit('loaded', this.document)
       } catch (e) {
         this.document = null
@@ -357,9 +366,6 @@ export default {
     updatePage(page, canvas, draws) {
       const context = canvas.getContext('2d')
       const contextDraws = draws.getContext('2d')
-      let scale = Math.max(this.scale, 1)
-      context.scale(scale, scale)
-      contextDraws.scale(scale, scale)
       context.translate(this.cameraOffsetX ?? 0, this.cameraOffsetY ?? 0)
       contextDraws.translate(this.cameraOffsetX ?? 0, this.cameraOffsetY ?? 0)
     },
@@ -368,7 +374,7 @@ export default {
       this.$emit(
         'canvasEvent',
         event,
-        event.target.attributes.getNamedItem('page').value
+        event.target?.attributes?.getNamedItem('page')?.value
       )
     },
     /**
